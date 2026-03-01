@@ -34,7 +34,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           error: "アップロードの設定がありません。",
-          hint: "docs/SETUP.md を参照し、.env.local に SUPABASE_URL と SUPABASE_ANON_KEY を設定してください。",
+          hint: process.env.VERCEL
+            ? "Vercel の Project Settings → Environment Variables に SUPABASE_URL と SUPABASE_ANON_KEY を追加して Redeploy してください。"
+            : "docs/SETUP.md を参照し、.env.local に SUPABASE_URL と SUPABASE_ANON_KEY を設定してください。",
         },
         { status: 503 }
       );

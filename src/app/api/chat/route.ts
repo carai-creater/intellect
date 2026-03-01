@@ -24,7 +24,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           error: "チャットの設定がありません。",
-          hint: ".env.local に GEMINI_API_KEY を設定してください。Google AI Studio で API キーを発行できます。",
+          hint: process.env.VERCEL
+            ? "Vercel の Project Settings → Environment Variables に GEMINI_API_KEY を追加して Redeploy してください。"
+            : "ローカル: .env.local に GEMINI_API_KEY を設定してください。Google AI Studio で API キーを発行できます。",
         },
         { status: 503 }
       );
@@ -66,7 +68,9 @@ export async function POST(request: NextRequest) {
           ? "Gemini API の設定を確認してください。"
           : "回答の生成に失敗しました。",
         hint: isKeyError
-          ? ".env.local の GEMINI_API_KEY が正しいか、Google AI Studio でキーが有効か確認してください。"
+          ? process.env.VERCEL
+            ? "Vercel の Environment Variables で GEMINI_API_KEY が正しく設定されているか確認し、Redeploy してください。"
+            : ".env.local の GEMINI_API_KEY が正しいか、Google AI Studio でキーが有効か確認してください。"
           : "しばらくしてからもう一度お試しください。",
       },
       { status: isKeyError ? 503 : 500 }
