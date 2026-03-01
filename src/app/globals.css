@@ -1,0 +1,16 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --ink: #1d1d1f;
+  --surface: #f5f5f7;
+  --border: #e5e5e7;
+  --apple-blue: #007aff;
+  --white: #ffffff;
+}
+
+body {
+  color: var(--ink);
+  background: var(--white);
+}
