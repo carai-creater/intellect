@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
+import { APP_NAME } from "@/lib/app-config";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Intellect",
+  title: APP_NAME,
   description: "Contextをアップロードして、AI先生を作成",
 };
 

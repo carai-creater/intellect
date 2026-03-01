@@ -1,11 +1,12 @@
 import Link from "next/link";
+import { APP_NAME } from "@/lib/app-config";
 
 export default function StartPage() {
   return (
     <main className="min-h-screen flex flex-col items-center justify-center bg-white px-6">
       <div className="flex flex-col items-center gap-10 max-w-md w-full">
         <h1 className="text-3xl md:text-4xl font-bold text-ink tracking-tight text-center">
-          Intellect
+          {APP_NAME}
         </h1>
         <p className="text-base text-ink/70 text-center leading-relaxed">
           PDFでAI先生を作り、
