@@ -1,10 +1,32 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
+/** RAG用: PDF からテキストを抽出（最大文字数で打ち切り） */
+const MAX_EXTRACTED_LENGTH = 500_000;
+
+async function extractTextFromPdf(file: File): Promise<string | null> {
+  try {
+    const mod = await import("pdf-parse");
+    const pdfParse = (mod.default ?? mod) as (buf: Buffer) => Promise<{ text?: string }>;
+    const ab = await file.arrayBuffer();
+    const buffer = Buffer.from(ab);
+    const data = await pdfParse(buffer);
+    const text =
+      typeof data?.text === "string" ? data.text.trim() : "";
+    if (!text) return null;
+    return text.length > MAX_EXTRACTED_LENGTH
+      ? text.slice(0, MAX_EXTRACTED_LENGTH) + "\n\n[一部省略しました]"
+      : text;
+  } catch (e) {
+    console.error("[POST /api/upload] PDF extract error:", e);
+    return null;
+  }
+}
+
 /**
  * POST /api/upload
- * 作成者モード: PDF を Supabase Storage に保存し、メタデータ（宣伝リンク等）を DB に登録する。
- * MVP: スケルトンのみ。Supabase バケット・テーブル準備後に実装。
+ * 作成者モード: PDF を Supabase Storage に保存し、テキストを抽出して DB に登録する。
+ * extracted_text が RAG（チャット）で参照されます。
  */
 export async function POST(request: NextRequest) {
   try {
@@ -68,6 +90,8 @@ export async function POST(request: NextRequest) {
 
     const path = uploadData.path;
 
+    const extractedText = await extractTextFromPdf(file);
+
     const { data: teacher, error: insertError } = await supabase
       .from("teachers")
       .insert({
@@ -76,7 +100,7 @@ export async function POST(request: NextRequest) {
         promo_link: promoLink,
         storage_path: path,
         file_name: file.name,
-        extracted_text: null,
+        extracted_text: extractedText,
       })
       .select("id, name")
       .single();
@@ -96,7 +120,9 @@ export async function POST(request: NextRequest) {
       ok: true,
       teacherId: teacher.id,
       name: teacher.name,
-      message: `「${teacher.name}」を作成しました。利用者は「話す」から選んで使えます。`,
+      message: extractedText
+        ? `「${teacher.name}」を作成しました。利用者は「話す」から選んで、アップロードした資料を参照して質問できます。`
+        : `「${teacher.name}」を作成しました。利用者は「話す」から選んで使えます。（PDFのテキスト抽出に失敗したため、この先生のチャットでは資料を参照できません。別のPDFでお試しください。）`,
     });
   } catch (err) {
     console.error("[POST /api/upload]", err);
