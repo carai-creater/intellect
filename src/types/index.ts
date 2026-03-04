@@ -39,6 +39,8 @@ export interface ChatMessage {
 export interface ChatRequest {
   message: string;
   contextId?: string;
+  /** 選択するAIプロバイダ（省略時は Gemini） */
+  model?: "gemini" | "openai";
   history?: ChatMessage[];
 }
 

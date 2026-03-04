@@ -19,6 +19,7 @@ export function ChatPanel({ contextId, teacherName }: ChatPanelProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [model, setModel] = useState<"gemini" | "openai">("gemini");
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const send = useCallback(async () => {
@@ -33,7 +34,11 @@ export function ChatPanel({ contextId, teacherName }: ChatPanelProps) {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: text, contextId: contextId || undefined }),
+        body: JSON.stringify({
+          message: text,
+          contextId: contextId || undefined,
+          model,
+        }),
       });
       const data = await res.json();
 
@@ -69,7 +74,12 @@ export function ChatPanel({ contextId, teacherName }: ChatPanelProps) {
           <div className="text-center py-10 px-4">
             <p className="text-sm font-medium text-ink/70 mb-1">まだメッセージはありません</p>
             <p className="text-sm text-ink/50">
-              {teacherName ? `「${teacherName}」に質問できます。` : "下の欄に質問を入力して「送信」を押すと、AI先生が答えます。"}
+              {teacherName
+                ? `「${teacherName}」に質問できます。`
+                : "下の欄に質問を入力して「送信」を押すと、AI先生が答えます。"}
+            </p>
+            <p className="text-xs text-ink/40 mt-1">
+              現在のプロバイダ: <strong className="text-ink">{model === "gemini" ? "Gemini" : "OpenAI"}</strong>
             </p>
           </div>
         )}
@@ -128,23 +138,40 @@ export function ChatPanel({ contextId, teacherName }: ChatPanelProps) {
             e.preventDefault();
             send();
           }}
-          className="flex gap-2"
+          className="flex flex-col gap-2"
         >
-          <input
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="質問を入力して送信"
-            className="flex-1 rounded-xl border border-border bg-surface px-4 py-3 text-sm text-ink placeholder:text-ink/40 focus:outline-none focus:ring-2 focus:ring-apple-blue/30"
-            disabled={loading}
-          />
-          <button
-            type="submit"
-            disabled={loading || !input.trim()}
-            className="px-5 py-3 rounded-xl bg-apple-blue text-white text-sm font-medium disabled:opacity-50"
-          >
-            送信
-          </button>
+          <div className="flex items-center gap-2">
+            <label htmlFor="model-select" className="text-sm text-ink/60">
+              プロバイダ:
+            </label>
+            <select
+              id="model-select"
+              value={model}
+              onChange={(e) => setModel(e.target.value as "gemini" | "openai")}
+              className="rounded-xl border border-border bg-surface px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-apple-blue/30"
+              disabled={loading}
+            >
+              <option value="gemini">Gemini</option>
+              <option value="openai">OpenAI</option>
+            </select>
+          </div>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="質問を入力して送信"
+              className="flex-1 rounded-xl border border-border bg-surface px-4 py-3 text-sm text-ink placeholder:text-ink/40 focus:outline-none focus:ring-2 focus:ring-apple-blue/30"
+              disabled={loading}
+            />
+            <button
+              type="submit"
+              disabled={loading || !input.trim()}
+              className="px-5 py-3 rounded-xl bg-apple-blue text-white text-sm font-medium disabled:opacity-50"
+            >
+              送信
+            </button>
+          </div>
         </form>
       </div>
     </div>

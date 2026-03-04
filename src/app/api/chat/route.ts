@@ -11,7 +11,7 @@ import type { ChatRequest } from "@/types";
 export async function POST(request: NextRequest) {
   try {
     const body = (await request.json()) as ChatRequest;
-    const { message, contextId, history } = body;
+    const { message, contextId, history, model } = body;
 
     if (!message || typeof message !== "string") {
       return NextResponse.json(
@@ -20,13 +20,28 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!process.env.GEMINI_API_KEY) {
+    // デフォルトは Gemini
+    const provider = model === "openai" ? "openai" : "gemini";
+
+    if (provider === "gemini" && !process.env.GEMINI_API_KEY) {
       return NextResponse.json(
         {
-          error: "チャットの設定がありません。",
+          error: "Gemini API キーが設定されていません。",
           hint: process.env.VERCEL
             ? "Vercel の Project Settings → Environment Variables に GEMINI_API_KEY を追加して Redeploy してください。"
             : "ローカル: .env.local に GEMINI_API_KEY を設定してください。Google AI Studio で API キーを発行できます。",
+        },
+        { status: 503 }
+      );
+    }
+
+    if (provider === "openai" && !process.env.OPENAI_API_KEY) {
+      return NextResponse.json(
+        {
+          error: "OpenAI API キーが設定されていません。",
+          hint: process.env.VERCEL
+            ? "Vercel の Project Settings → Environment Variables に OPENAI_API_KEY を追加して Redeploy してください。"
+            : "ローカル: .env.local に OPENAI_API_KEY を設定してください。",
         },
         { status: 503 }
       );
@@ -50,30 +65,42 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const response = await generateReply({
-      userMessage: message,
-      contextText,
-      creatorName,
-      promoLink,
-    });
+    let response;
+    if (provider === "openai") {
+      // lazy import to avoid bundling on client
+      const { generateReplyOpenAI } = await import("@/services/chat/openai");
+      response = await generateReplyOpenAI({
+        userMessage: message,
+        contextText,
+        creatorName,
+        promoLink,
+      });
+    } else {
+      response = await generateReply({
+        userMessage: message,
+        contextText,
+        creatorName,
+        promoLink,
+      });
+    }
 
     return NextResponse.json(response);
   } catch (err) {
     console.error("[POST /api/chat]", err);
     const message = err instanceof Error ? err.message : "";
-    const isKeyError = /API key|GEMINI|invalid|quota/i.test(message);
+    const isApiKeyError = /API key|GEMINI|OPENAI|invalid|quota/i.test(message);
     return NextResponse.json(
       {
-        error: isKeyError
-          ? "Gemini API の設定を確認してください。"
+        error: isApiKeyError
+          ? "AI API の設定を確認してください。"
           : "回答の生成に失敗しました。",
-        hint: isKeyError
+        hint: isApiKeyError
           ? process.env.VERCEL
-            ? "Vercel の Environment Variables で GEMINI_API_KEY が正しく設定されているか確認し、Redeploy してください。"
-            : ".env.local の GEMINI_API_KEY が正しいか、Google AI Studio でキーが有効か確認してください。"
+            ? "Vercel の Environment Variables でキーが正しく設定されているか確認し、Redeploy してください。"
+            : "`.env.local` の GEMINI_API_KEY または OPENAI_API_KEY を確認してください。"
           : "しばらくしてからもう一度お試しください。",
       },
-      { status: isKeyError ? 503 : 500 }
+      { status: isApiKeyError ? 503 : 500 }
     );
   }
 }
